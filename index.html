@@ -2,18 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="google-site-verification" content="eR447V771GTmBssWZpGeHhoO8D9n5MqZoMLEIqjuwyA" />
+  <meta name="google-site-verification" content="aapka_verification_code_yahan_hoga" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AIToolPulse - Best AI Tools, Guides & Reviews</title>
-  <meta name="description" content="Discover the best free and paid AI tools, step-by-step guides, and honest software reviews to boost your productivity.">
+  <title>AIToolPulse - Discover Modern AI Tools & Workflows</title>
+  <meta name="description" content="AIToolPulse is your daily source for actionable guides, honest comparisons, and productivity workflows using artificial intelligence.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
     <div class="container nav-container">
-      <a href="/" class="logo">⚡ AIToolPulse</a>
+      <a href="index.html" class="logo">⚡ AI<span>ToolPulse</span></a>
       <nav>
-        <a href="#articles">Articles</a>
+        <a href="index.html">Home</a>
         <a href="about.html">About</a>
         <a href="privacy.html">Privacy</a>
         <a href="contact.html">Contact</a>
@@ -21,26 +21,28 @@
     </div>
   </header>
 
-  <main class="container">
-    <section class="hero">
-      <h1>Discover The World's Best AI Tools & Practical Guides</h1>
-      <p>Hand-tested AI workflows, unbiased software comparisons, and actionable tutorials updated daily.</p>
-    </section>
+  <section class="hero">
+    <div class="container">
+      <span class="hero-badge">⚡ Updated Daily with Tested AI Workflows</span>
+      <h1>Supercharge Your Work With Smart AI Tools</h1>
+      <p>Unbiased reviews, no-code automation tutorials, and free AI alternatives to help you build, design, and create faster.</p>
+    </div>
+  </section>
 
-    <section id="articles">
-      <h2>Latest AI Guides & Reviews</h2>
-      <div id="posts-list" class="grid">
-        <!-- Posts will dynamically render here -->
-      </div>
-    </section>
+  <main class="container posts-section">
+    <h2 class="section-title">Latest Reviews &amp; Guides</h2>
+    <div class="posts-grid" id="posts-container">
+      <!-- Posts dynamically loaded from posts.json -->
+    </div>
   </main>
 
   <footer>
     <div class="container footer-content">
       <p>© 2026 AIToolPulse. All rights reserved.</p>
       <div class="footer-links">
+        <a href="about.html">About</a>
         <a href="privacy.html">Privacy Policy</a>
-        <a href="terms.html">Terms of Service</a>
+        <a href="contact.html">Contact</a>
       </div>
     </div>
   </footer>
@@ -49,22 +51,31 @@
     fetch('posts.json')
       .then(res => res.json())
       .then(posts => {
-        const list = document.getElementById('posts-list');
+        const container = document.getElementById('posts-container');
         if (!posts || posts.length === 0) {
-          list.innerHTML = '<p>Fresh AI reviews are being generated. Check back shortly!</p>';
+          container.innerHTML = '<p style="color: #94a3b8;">Publishing fresh articles soon. Check back shortly!</p>';
           return;
         }
-        list.innerHTML = posts.map(post => `
-          <article class="card">
-            <h3><a href="${post.slug}.html">${post.title}</a></h3>
-            <p class="meta">Published on ${post.date} • ${post.readTime} min read</p>
-            <p class="summary">${post.summary}</p>
-            <a href="${post.slug}.html" class="read-more">Read Full Guide →</a>
+
+        container.innerHTML = posts.map(post => `
+          <article class="post-card">
+            <a href="${post.slug}.html">
+              <img src="${post.image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80'}" alt="${post.title}" class="card-img" loading="lazy">
+            </a>
+            <div class="card-body">
+              <span class="card-tag">AI Guide</span>
+              <h3 class="card-title"><a href="${post.slug}.html">${post.title}</a></h3>
+              <p class="card-desc">${post.summary}</p>
+              <div class="card-meta">
+                <span>📅 ${post.date}</span>
+                <span>⏱️ ${post.readTime || 5} min read</span>
+              </div>
+            </div>
           </article>
         `).join('');
       })
-      .catch(() => {
-        document.getElementById('posts-list').innerHTML = '<p>Welcome! Our automated engine is publishing the first batch of articles.</p>';
+      .catch(err => {
+        console.error("Error loading posts:", err);
       });
   </script>
 </body>
