@@ -10,7 +10,7 @@ if not API_KEY:
 
 client = Groq(api_key=API_KEY)
 
-# Dynamically pick the first available active chat model
+# Dynamically pick available chat model
 available_models = [m.id for m in client.models.list().data]
 preferred = [
     m for m in available_models 
@@ -18,7 +18,6 @@ preferred = [
     and not any(x in m.lower() for x in ["whisper", "guard", "vision"])
 ]
 selected_model = preferred[0] if preferred else available_models[0]
-print(f"Selected active model: {selected_model}")
 
 TOPICS = [
     "Top 5 Free AI Tools for Video Editing Without Watermark",
@@ -33,16 +32,16 @@ TOPICS = [
     "Best AI Tools for Students to Summarize Research Papers"
 ]
 
-# High quality curated tech images mapping
-IMAGE_POOL = [
-    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1618172193763-c511deb635ca?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80"
+# High quality curated images pool for tools and headers
+TOOL_IMAGES = [
+    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=900&q=80",
+    "https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=900&q=80",
+    "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=900&q=80",
+    "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=900&q=80",
+    "https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=900&q=80",
+    "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=900&q=80",
+    "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=900&q=80",
+    "https://images.unsplash.com/photo-1618172193763-c511deb635ca?auto=format&fit=crop&w=900&q=80"
 ]
 
 def load_posts():
@@ -66,30 +65,25 @@ for t in TOPICS:
 if not topic_to_write:
     topic_to_write = f"Must-Have AI Productivity Tools: Edition {len(posts) + 1}"
 
-# Select rotating featured image
-img_idx = len(posts) % len(IMAGE_POOL)
-post_image = IMAGE_POOL[img_idx]
+featured_img = TOOL_IMAGES[len(posts) % len(TOOL_IMAGES)]
 
 prompt = f"""
-You are an expert tech reviewer and SEO writer for AIToolPulse.
-Write an in-depth, human-style blog post about: "{topic_to_write}".
+You are an expert tech reviewer writing for AIToolPulse.
+Write an in-depth, hands-on review about: "{topic_to_write}".
 
 Structure requirements:
-1. No fluff or generic intro - jump straight into practical value.
-2. Review 3 to 4 real tools with:
-   - Tool Name (<h3>)
-   - Visual banner: Include an image tag right under the tool heading using Unsplash tech photos with descriptive alt text:
-     `<img src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80" alt="Tool interface preview" style="width:100%; border-radius:8px; margin:1rem 0;" loading="lazy">` (vary the photo IDs slightly or use standard tech/software query tags).
-   - Core Features (bullet points)
-   - Pricing / Free details
-   - Pros & Cons
-3. Practical comparison table comparing all tools.
-4. Quick verdict and 2 practical FAQs.
+1. No intro fluff.
+2. Review 4 real tools using <h3> for each tool title (e.g. <h3>1. ToolName</h3>).
+3. Under each tool provide:
+   - What it does and key capabilities (bullet points)
+   - Real-world pricing details (Free tier limits vs Paid plans)
+   - Pros and Cons
+4. Add a comparison table comparing all 4 tools.
+5. Provide a clear verdict and 2 quick FAQs.
 
 Formatting:
-- Return ONLY clean HTML content that goes inside an article container.
-- Use <h2>, <h3>, <p>, <ul>, <li>, <img>, and <table> tags.
-- Do NOT include ```html markdown code blocks. Start directly with HTML elements.
+- Return ONLY clean HTML tags: <h2>, <h3>, <p>, <ul>, <li>, <table>.
+- Do NOT use ```html code fences.
 """
 
 completion = client.chat.completions.create(
@@ -106,6 +100,16 @@ if html_body.startswith("```"):
 if html_body.endswith("```"):
     html_body = html_body[:-3]
 html_body = html_body.strip()
+
+# AUTOMATIC INJECTION: Insert a photo under every <h3> heading
+h3_matches = list(re.finditer(r'(</h3>)', html_body, re.IGNORECASE))
+offset = 0
+for idx, match in enumerate(h3_matches):
+    img_url = TOOL_IMAGES[(len(posts) + idx + 1) % len(TOOL_IMAGES)]
+    img_tag = f'\n<img src="{img_url}" alt="Software overview interface" style="width:100%; max-height:360px; object-fit:cover; border-radius:10px; margin:1rem 0 1.5rem; border:1px solid #334155;" loading="lazy">\n'
+    insert_pos = match.end() + offset
+    html_body = html_body[:insert_pos] + img_tag + html_body[insert_pos:]
+    offset += len(img_tag)
 
 date_str = datetime.now().strftime("%B %d, %Y")
 slug = re.sub(r'[^a-zA-Z0-9]+', '-', topic_to_write.lower()).strip('-')
@@ -134,11 +138,11 @@ full_page_html = f"""<!DOCTYPE html>
 
   <main class="container">
     <article class="post-content">
-      <span class="card-tag">Comprehensive Guide</span>
+      <span class="card-tag">In-Depth Review</span>
       <h1>{topic_to_write}</h1>
       <p class="meta">Published on {date_str} • 6 min read</p>
       
-      <img src="{post_image}" alt="{topic_to_write}" class="featured-img" loading="eager">
+      <img src="{featured_img}" alt="{topic_to_write}" class="featured-img" loading="eager">
 
       {html_body}
     </article>
@@ -166,8 +170,8 @@ new_entry = {
     "slug": slug,
     "date": date_str,
     "readTime": 6,
-    "image": post_image,
-    "summary": f"In-depth breakdown of {topic_to_write} featuring real test results, pricing comparison, pros, and cons."
+    "image": featured_img,
+    "summary": f"Hands-on test and detailed breakdown of {topic_to_write} with pricing, features, pros, and cons."
 }
 
 posts.insert(0, new_entry)
@@ -175,7 +179,7 @@ posts.insert(0, new_entry)
 with open("posts.json", "w", encoding="utf-8") as f:
     json.dump(posts, f, indent=2)
 
-# Generate/Update sitemap.xml automatically
+# Update sitemap.xml
 base_url = "https://aitoolpulse.github.io/aitoolpulse"
 sitemap_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -209,4 +213,4 @@ sitemap_content += "</urlset>"
 with open("sitemap.xml", "w", encoding="utf-8") as f:
     f.write(sitemap_content)
 
-print(f"Successfully generated article with internal images: {topic_to_write}")
+print(f"Successfully generated article with guaranteed tool images: {topic_to_write}")
