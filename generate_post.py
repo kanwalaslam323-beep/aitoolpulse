@@ -10,6 +10,20 @@ if not API_KEY:
 
 client = Groq(api_key=API_KEY)
 
+# Dynamically pick the first available active chat model
+available_models = [m.id for m in client.models.list().data]
+print("Available models in your Groq account:", available_models)
+
+# Filter for common text generation models
+preferred = [
+    m for m in available_models 
+    if any(k in m.lower() for k in ["llama", "mixtral", "gemma"]) 
+    and not any(x in m.lower() for x in ["whisper", "guard", "vision"])
+]
+
+selected_model = preferred[0] if preferred else available_models[0]
+print(f"Selected active model: {selected_model}")
+
 TOPICS = [
     "Top 5 Free AI Tools for Video Editing Without Watermark",
     "Best AI Presentation Makers to Create Slides in Minutes",
@@ -65,10 +79,9 @@ Formatting:
 """
 
 completion = client.chat.completions.create(
-    model="llama-3.1-8b-instant",
+    model=selected_model,
     messages=[{"role": "user", "content": prompt}],
     temperature=0.7
-
 )
 
 html_body = completion.choices[0].message.content.strip()
