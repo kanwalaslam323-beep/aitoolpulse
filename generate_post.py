@@ -10,14 +10,29 @@ if not API_KEY:
 
 client = Groq(api_key=API_KEY)
 
-# Dynamically pick available chat model
-available_models = [m.id for m in client.models.list().data]
-preferred = [
-    m for m in available_models 
-    if any(k in m.lower() for k in ["llama", "mixtral", "gemma"]) 
-    and not any(x in m.lower() for x in ["whisper", "guard", "vision"])
+# Reliable standard Groq models in priority order
+CANDIDATE_MODELS = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+    "llama3-70b-8192",
+    "llama3-8b-8192",
+    "mixtral-8x7b-32768",
+    "gemma2-9b-it"
 ]
-selected_model = preferred[0] if preferred else available_models[0]
+
+available_models = [m.id for m in client.models.list().data]
+
+selected_model = None
+for candidate in CANDIDATE_MODELS:
+    if candidate in available_models:
+        selected_model = candidate
+        break
+
+if not selected_model:
+    # Fallback to standard 8b model
+    selected_model = "llama-3.1-8b-instant"
+
+print(f"Selected production model: {selected_model}")
 
 TOPICS = [
     "Top 5 Free AI Tools for Video Editing Without Watermark",
