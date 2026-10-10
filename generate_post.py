@@ -1,6 +1,7 @@
 import os
 import json
 import re
+import urllib.parse
 from datetime import datetime
 from groq import Groq
 
@@ -12,15 +13,11 @@ client = Groq(api_key=API_KEY)
 
 # Dynamically pick the first available active chat model
 available_models = [m.id for m in client.models.list().data]
-print("Available models in your Groq account:", available_models)
-
-# Filter for common text generation models
 preferred = [
     m for m in available_models 
     if any(k in m.lower() for k in ["llama", "mixtral", "gemma"]) 
     and not any(x in m.lower() for x in ["whisper", "guard", "vision"])
 ]
-
 selected_model = preferred[0] if preferred else available_models[0]
 print(f"Selected active model: {selected_model}")
 
@@ -35,6 +32,18 @@ TOPICS = [
     "Best AI Resume Builders to Land High-Paying Remote Jobs",
     "Top AI Chrome Extensions to Boost Your Daily Productivity",
     "Best AI Tools for Students to Summarize Research Papers"
+]
+
+# High quality curated tech images mapping
+IMAGE_POOL = [
+    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1618172193763-c511deb635ca?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80"
 ]
 
 def load_posts():
@@ -58,6 +67,10 @@ for t in TOPICS:
 if not topic_to_write:
     topic_to_write = f"Must-Have AI Productivity Tools: Edition {len(posts) + 1}"
 
+# Select rotating featured image
+img_idx = len(posts) % len(IMAGE_POOL)
+post_image = IMAGE_POOL[img_idx]
+
 prompt = f"""
 You are an expert tech reviewer and SEO writer.
 Write an in-depth, human-style blog post about: "{topic_to_write}".
@@ -69,7 +82,7 @@ Structure requirements:
    - Core Features (bullet points)
    - Pricing / Free details
    - Pros & Cons
-3. Practical advice or comparison section.
+3. Practical comparison table.
 4. Quick verdict and 2 practical FAQs.
 
 Formatting:
@@ -108,7 +121,7 @@ full_page_html = f"""<!DOCTYPE html>
 <body>
   <header>
     <div class="container nav-container">
-      <a href="index.html" class="logo">⚡ AIToolPulse</a>
+      <a href="index.html" class="logo">⚡ AI<span>ToolPulse</span></a>
       <nav>
         <a href="index.html">Home</a>
         <a href="about.html">About</a>
@@ -120,9 +133,12 @@ full_page_html = f"""<!DOCTYPE html>
 
   <main class="container">
     <article class="post-content">
+      <span class="card-tag">Comprehensive Guide</span>
       <h1>{topic_to_write}</h1>
       <p class="meta">Published on {date_str} • 6 min read</p>
-      <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid #e2e8f0;">
+      
+      <img src="{post_image}" alt="{topic_to_write}" class="featured-img" loading="eager">
+
       {html_body}
     </article>
   </main>
@@ -131,7 +147,9 @@ full_page_html = f"""<!DOCTYPE html>
     <div class="container footer-content">
       <p>© 2026 AIToolPulse. All rights reserved.</p>
       <div class="footer-links">
+        <a href="about.html">About</a>
         <a href="privacy.html">Privacy Policy</a>
+        <a href="contact.html">Contact</a>
       </div>
     </div>
   </footer>
@@ -147,15 +165,17 @@ new_entry = {
     "slug": slug,
     "date": date_str,
     "readTime": 6,
-    "summary": f"Hands-on guide and detailed breakdown of {topic_to_write} with pricing, pros, and cons."
+    "image": post_image,
+    "summary": f"In-depth breakdown of {topic_to_write} featuring real test results, pricing comparison, pros, and cons."
 }
 
 posts.insert(0, new_entry)
 
 with open("posts.json", "w", encoding="utf-8") as f:
     json.dump(posts, f, indent=2)
+
 # Generate/Update sitemap.xml automatically
-base_url = "https://aitoolpulse.github.io/aitoolpulse"  # Aapka GitHub Pages URL
+base_url = "https://aitoolpulse.github.io/aitoolpulse"
 sitemap_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
@@ -187,4 +207,5 @@ sitemap_content += "</urlset>"
 
 with open("sitemap.xml", "w", encoding="utf-8") as f:
     f.write(sitemap_content)
-print(f"Successfully generated article: {topic_to_write}")
+
+print(f"Successfully generated article with featured image: {topic_to_write}")
