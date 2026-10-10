@@ -2,16 +2,15 @@ import os
 import json
 import re
 from datetime import datetime
-import google.generativeai as genai
+from google import genai
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
 if not API_KEY:
     raise ValueError("GEMINI_API_KEY not found in environment secrets!")
 
-genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel("gemini-1.5-flash")
+# Initialize the new Google GenAI client
+client = genai.Client(api_key=API_KEY)
 
-# List of high-traffic, practical AI topics
 TOPICS = [
     "Top 5 Free AI Tools for Video Editing Without Watermark",
     "Best AI Presentation Makers to Create Slides in Minutes",
@@ -37,7 +36,6 @@ def load_posts():
 posts = load_posts()
 existing_titles = [p.get("title", "") for p in posts]
 
-# Choose an unused topic or fallback
 topic_to_write = None
 for t in TOPICS:
     if t not in existing_titles:
@@ -68,7 +66,11 @@ Formatting:
 - Do NOT wrap the output in ```html code fences. Start directly with HTML tags.
 """
 
-response = model.generate_content(prompt)
+response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents=prompt
+)
+
 html_body = response.text.strip()
 if html_body.startswith("```html"):
     html_body = html_body[7:]
@@ -122,17 +124,15 @@ full_page_html = f"""<!DOCTYPE html>
 </html>
 """
 
-# Save post HTML file
 with open(f"{slug}.html", "w", encoding="utf-8") as f:
     f.write(full_page_html)
 
-# Update posts list
 new_entry = {
     "title": topic_to_write,
     "slug": slug,
     "date": date_str,
     "readTime": 6,
-    "summary": f"Comprehensive guide and honest breakdown of {topic_to_write} with pros, cons, and practical tips."
+    "summary": f"Comprehensive guide and breakdown of {topic_to_write} with features, pros, cons, and practical tips."
 }
 
 posts.insert(0, new_entry)
