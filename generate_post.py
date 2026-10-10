@@ -31,16 +31,19 @@ TOPICS = [
     "Best AI Tools for Students to Summarize Research Papers"
 ]
 
-# High quality curated images pool
-TOOL_IMAGES = [
-    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=900&q=80",
-    "https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=900&q=80",
-    "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=900&q=80",
-    "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=900&q=80",
-    "https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=900&q=80",
-    "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=900&q=80",
-    "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=900&q=80",
-    "https://images.unsplash.com/photo-1618172193763-c511deb635ca?auto=format&fit=crop&w=900&q=80"
+FEATURED_IMAGES = [
+    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80"
+]
+
+BODY_IMAGES = [
+    "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=900&q=80",
+    "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=80",
+    "https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?auto=format&fit=crop&w=900&q=80"
 ]
 
 def load_posts():
@@ -64,25 +67,22 @@ for t in TOPICS:
 if not topic_to_write:
     topic_to_write = f"Must-Have AI Productivity Tools: Edition {len(posts) + 1}"
 
-featured_img = TOOL_IMAGES[len(posts) % len(TOOL_IMAGES)]
+featured_img = FEATURED_IMAGES[len(posts) % len(FEATURED_IMAGES)]
 
 prompt = f"""
-You are an expert tech reviewer writing for AIToolPulse.
-Write an in-depth, hands-on review about: "{topic_to_write}".
+You are a senior tech writer for AIToolPulse. Write an honest, in-depth review on: "{topic_to_write}".
 
-Structure requirements:
-1. Jump straight into the content.
-2. Review 4 real tools. Format each tool name as an <h3> tag (e.g. <h3>1. ToolName</h3>).
-3. Under each tool provide:
-   - What it does and key capabilities (bullet points)
-   - Real-world pricing details (Free tier limits vs Paid plans)
-   - Pros and Cons
-4. Add a comparison table comparing all 4 tools.
-5. Provide a clear verdict and 2 quick FAQs.
+Guidelines:
+1. Start directly with an insightful introductory summary (2 short paragraphs).
+2. Review 4 real software/tools. Use <h2> for each tool name (e.g. <h2>1. Runway ML</h2>).
+3. Under each tool include:
+   - What makes it unique & key features (bullet points)
+   - Pricing & free limitations
+   - Real-world Pros and Cons
+4. Add a comparison <table> comparing all 4 tools.
+5. End with a Final Verdict paragraph and 2 FAQs.
 
-Formatting:
-- Return ONLY clean HTML tags: <h2>, <h3>, <p>, <ul>, <li>, <table>.
-- Do NOT use ```html code fences.
+Output ONLY valid HTML elements (<h2>, <p>, <ul>, <li>, <table>, <tr>, <th>, <td>). No markdown backticks.
 """
 
 completion = None
@@ -94,11 +94,11 @@ for model_name in usable_models:
             temperature=0.7
         )
         break
-    except Exception as e:
+    except Exception:
         continue
 
 if not completion:
-    raise RuntimeError("None of the available Groq models succeeded.")
+    raise RuntimeError("Model execution failed.")
 
 html_body = completion.choices[0].message.content.strip()
 if html_body.startswith("```html"):
@@ -109,32 +109,14 @@ if html_body.endswith("```"):
     html_body = html_body[:-3]
 html_body = html_body.strip()
 
-# ROBUST IMAGE INJECTION:
-# Step A: Check for any heading (</h3> or </h2>)
-heading_matches = list(re.finditer(r'(</h[23]>)', html_body, re.IGNORECASE))
-
-if len(heading_matches) >= 2:
-    # Heading ke foran baad image chipkao
-    offset = 0
-    # Pehli heading ko chhor kar (jo aksar intro hoti hai) baki headings par inject karo
-    for idx, match in enumerate(heading_matches[1:5]):
-        img_url = TOOL_IMAGES[(len(posts) + idx + 1) % len(TOOL_IMAGES)]
-        img_tag = f'\n<div style="margin: 1.5rem 0;"><img src="{img_url}" alt="Software interface overview" style="width:100%; max-height:360px; object-fit:cover; border-radius:10px; border:1px solid #334155;" loading="lazy"></div>\n'
-        pos = match.end() + offset
-        html_body = html_body[:pos] + img_tag + html_body[pos:]
-        offset += len(img_tag)
-else:
-    # Fallback: Agar AI ne headings dhang se na di hon, to har 3 paragraphs ke baad image lagao
-    p_matches = list(re.finditer(r'(</p>)', html_body, re.IGNORECASE))
-    offset = 0
-    for idx in range(2, len(p_matches), 3):
-        if idx >= len(p_matches):
-            break
-        img_url = TOOL_IMAGES[(len(posts) + (idx // 3)) % len(TOOL_IMAGES)]
-        img_tag = f'\n<div style="margin: 1.5rem 0;"><img src="{img_url}" alt="Tool feature demo" style="width:100%; max-height:360px; object-fit:cover; border-radius:10px; border:1px solid #334155;" loading="lazy"></div>\n'
-        pos = p_matches[idx].end() + offset
-        html_body = html_body[:pos] + img_tag + html_body[pos:]
-        offset += len(img_tag)
+# Clean mid-article injection: sirf 1 balanced image darmiyan mein insert hogi
+p_matches = list(re.finditer(r'(</p>)', html_body, re.IGNORECASE))
+if len(p_matches) >= 6:
+    mid_idx = len(p_matches) // 2
+    mid_img = BODY_IMAGES[len(posts) % len(BODY_IMAGES)]
+    img_tag = f'\n<div class="article-media"><img src="{mid_img}" alt="AI software workflow insights" loading="lazy"></div>\n'
+    insert_pos = p_matches[mid_idx].end()
+    html_body = html_body[:insert_pos] + img_tag + html_body[insert_pos:]
 
 date_str = datetime.now().strftime("%B %d, %Y")
 slug = re.sub(r'[^a-zA-Z0-9]+', '-', topic_to_write.lower()).strip('-')
@@ -163,7 +145,7 @@ full_page_html = f"""<!DOCTYPE html>
 
   <main class="container">
     <article class="post-content">
-      <span class="card-tag">In-Depth Review</span>
+      <span class="card-tag">Guide &amp; Analysis</span>
       <h1>{topic_to_write}</h1>
       <p class="meta">Published on {date_str} • 6 min read</p>
       
@@ -196,7 +178,7 @@ new_entry = {
     "date": date_str,
     "readTime": 6,
     "image": featured_img,
-    "summary": f"Hands-on test and detailed breakdown of {topic_to_write} with pricing, features, pros, and cons."
+    "summary": f"Hands-on breakdown of {topic_to_write} covering core features, free vs paid tiers, and practical trade-offs."
 }
 
 posts.insert(0, new_entry)
@@ -204,9 +186,9 @@ posts.insert(0, new_entry)
 with open("posts.json", "w", encoding="utf-8") as f:
     json.dump(posts, f, indent=2)
 
-base_url = "https://aitoolpulse.github.io/aitoolpulse"
+base_url = "[https://kanwalaslam323-beep.github.io/aitoolpulse](https://kanwalaslam323-beep.github.io/aitoolpulse)"
 sitemap_content = f"""<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="[http://www.sitemaps.org/schemas/sitemap/0.9](http://www.sitemaps.org/schemas/sitemap/0.9)">
   <url>
     <loc>{base_url}/</loc>
     <priority>1.0</priority>
@@ -237,4 +219,4 @@ sitemap_content += "</urlset>"
 with open("sitemap.xml", "w", encoding="utf-8") as f:
     f.write(sitemap_content)
 
-print(f"Successfully generated article with guaranteed in-content images: {topic_to_write}")
+print(f"Generated clean post layout: {topic_to_write}")
