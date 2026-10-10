@@ -10,29 +10,18 @@ if not API_KEY:
 
 client = Groq(api_key=API_KEY)
 
-# Reliable standard Groq models in priority order
-CANDIDATE_MODELS = [
-    "llama-3.3-70b-versatile",
-    "llama-3.1-8b-instant",
-    "llama3-70b-8192",
-    "llama3-8b-8192",
-    "mixtral-8x7b-32768",
-    "gemma2-9b-it"
+# Fetch all available models directly from account
+raw_models = client.models.list().data
+all_model_ids = [m.id for m in raw_models]
+print("Models reported by Groq API:", all_model_ids)
+
+# Filter out non-chat models (audio, guardrails, vision, internal)
+usable_models = [
+    m for m in all_model_ids
+    if not any(bad in m.lower() for bad in ["whisper", "guard", "vision", "canopylabs", "orpheus", "tts"])
 ]
 
-available_models = [m.id for m in client.models.list().data]
-
-selected_model = None
-for candidate in CANDIDATE_MODELS:
-    if candidate in available_models:
-        selected_model = candidate
-        break
-
-if not selected_model:
-    # Fallback to standard 8b model
-    selected_model = "llama-3.1-8b-instant"
-
-print(f"Selected production model: {selected_model}")
+print("Usable candidate models:", usable_models)
 
 TOPICS = [
     "Top 5 Free AI Tools for Video Editing Without Watermark",
@@ -47,7 +36,6 @@ TOPICS = [
     "Best AI Tools for Students to Summarize Research Papers"
 ]
 
-# High quality curated images pool for tools and headers
 TOOL_IMAGES = [
     "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=900&q=80",
     "https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=900&q=80",
@@ -101,11 +89,22 @@ Formatting:
 - Do NOT use ```html code fences.
 """
 
-completion = client.chat.completions.create(
-    model=selected_model,
-    messages=[{"role": "user", "content": prompt}],
-    temperature=0.7
-)
+completion = None
+for model_name in usable_models:
+    try:
+        print(f"Trying model: {model_name}...")
+        completion = client.chat.completions.create(
+            model=model_name,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7
+        )
+        print(f"Success with model: {model_name}")
+        break
+    except Exception as e:
+        print(f"Skipping {model_name} due to error: {e}")
+
+if not completion:
+    raise RuntimeError("None of the available Groq models succeeded.")
 
 html_body = completion.choices[0].message.content.strip()
 if html_body.startswith("```html"):
@@ -116,7 +115,7 @@ if html_body.endswith("```"):
     html_body = html_body[:-3]
 html_body = html_body.strip()
 
-# AUTOMATIC INJECTION: Insert a photo under every <h3> heading
+# AUTOMATIC INJECTION: Insert image under each <h3> heading
 h3_matches = list(re.finditer(r'(</h3>)', html_body, re.IGNORECASE))
 offset = 0
 for idx, match in enumerate(h3_matches):
@@ -194,7 +193,6 @@ posts.insert(0, new_entry)
 with open("posts.json", "w", encoding="utf-8") as f:
     json.dump(posts, f, indent=2)
 
-# Update sitemap.xml
 base_url = "https://aitoolpulse.github.io/aitoolpulse"
 sitemap_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -228,4 +226,4 @@ sitemap_content += "</urlset>"
 with open("sitemap.xml", "w", encoding="utf-8") as f:
     f.write(sitemap_content)
 
-print(f"Successfully generated article with guaranteed tool images: {topic_to_write}")
+print(f"Successfully published post with images: {topic_to_write}")
