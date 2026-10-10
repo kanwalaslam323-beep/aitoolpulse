@@ -10,18 +10,13 @@ if not API_KEY:
 
 client = Groq(api_key=API_KEY)
 
-# Fetch all available models directly from account
 raw_models = client.models.list().data
 all_model_ids = [m.id for m in raw_models]
-print("Models reported by Groq API:", all_model_ids)
 
-# Filter out non-chat models (audio, guardrails, vision, internal)
 usable_models = [
     m for m in all_model_ids
     if not any(bad in m.lower() for bad in ["whisper", "guard", "vision", "canopylabs", "orpheus", "tts"])
 ]
-
-print("Usable candidate models:", usable_models)
 
 TOPICS = [
     "Top 5 Free AI Tools for Video Editing Without Watermark",
@@ -36,6 +31,7 @@ TOPICS = [
     "Best AI Tools for Students to Summarize Research Papers"
 ]
 
+# High quality curated images pool
 TOOL_IMAGES = [
     "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=900&q=80",
     "https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=900&q=80",
@@ -75,8 +71,8 @@ You are an expert tech reviewer writing for AIToolPulse.
 Write an in-depth, hands-on review about: "{topic_to_write}".
 
 Structure requirements:
-1. No intro fluff.
-2. Review 4 real tools using <h3> for each tool title (e.g. <h3>1. ToolName</h3>).
+1. Jump straight into the content.
+2. Review 4 real tools. Format each tool name as an <h3> tag (e.g. <h3>1. ToolName</h3>).
 3. Under each tool provide:
    - What it does and key capabilities (bullet points)
    - Real-world pricing details (Free tier limits vs Paid plans)
@@ -92,16 +88,14 @@ Formatting:
 completion = None
 for model_name in usable_models:
     try:
-        print(f"Trying model: {model_name}...")
         completion = client.chat.completions.create(
             model=model_name,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7
         )
-        print(f"Success with model: {model_name}")
         break
     except Exception as e:
-        print(f"Skipping {model_name} due to error: {e}")
+        continue
 
 if not completion:
     raise RuntimeError("None of the available Groq models succeeded.")
@@ -115,15 +109,32 @@ if html_body.endswith("```"):
     html_body = html_body[:-3]
 html_body = html_body.strip()
 
-# AUTOMATIC INJECTION: Insert image under each <h3> heading
-h3_matches = list(re.finditer(r'(</h3>)', html_body, re.IGNORECASE))
-offset = 0
-for idx, match in enumerate(h3_matches):
-    img_url = TOOL_IMAGES[(len(posts) + idx + 1) % len(TOOL_IMAGES)]
-    img_tag = f'\n<img src="{img_url}" alt="Software overview interface" style="width:100%; max-height:360px; object-fit:cover; border-radius:10px; margin:1rem 0 1.5rem; border:1px solid #334155;" loading="lazy">\n'
-    insert_pos = match.end() + offset
-    html_body = html_body[:insert_pos] + img_tag + html_body[insert_pos:]
-    offset += len(img_tag)
+# ROBUST IMAGE INJECTION:
+# Step A: Check for any heading (</h3> or </h2>)
+heading_matches = list(re.finditer(r'(</h[23]>)', html_body, re.IGNORECASE))
+
+if len(heading_matches) >= 2:
+    # Heading ke foran baad image chipkao
+    offset = 0
+    # Pehli heading ko chhor kar (jo aksar intro hoti hai) baki headings par inject karo
+    for idx, match in enumerate(heading_matches[1:5]):
+        img_url = TOOL_IMAGES[(len(posts) + idx + 1) % len(TOOL_IMAGES)]
+        img_tag = f'\n<div style="margin: 1.5rem 0;"><img src="{img_url}" alt="Software interface overview" style="width:100%; max-height:360px; object-fit:cover; border-radius:10px; border:1px solid #334155;" loading="lazy"></div>\n'
+        pos = match.end() + offset
+        html_body = html_body[:pos] + img_tag + html_body[pos:]
+        offset += len(img_tag)
+else:
+    # Fallback: Agar AI ne headings dhang se na di hon, to har 3 paragraphs ke baad image lagao
+    p_matches = list(re.finditer(r'(</p>)', html_body, re.IGNORECASE))
+    offset = 0
+    for idx in range(2, len(p_matches), 3):
+        if idx >= len(p_matches):
+            break
+        img_url = TOOL_IMAGES[(len(posts) + (idx // 3)) % len(TOOL_IMAGES)]
+        img_tag = f'\n<div style="margin: 1.5rem 0;"><img src="{img_url}" alt="Tool feature demo" style="width:100%; max-height:360px; object-fit:cover; border-radius:10px; border:1px solid #334155;" loading="lazy"></div>\n'
+        pos = p_matches[idx].end() + offset
+        html_body = html_body[:pos] + img_tag + html_body[pos:]
+        offset += len(img_tag)
 
 date_str = datetime.now().strftime("%B %d, %Y")
 slug = re.sub(r'[^a-zA-Z0-9]+', '-', topic_to_write.lower()).strip('-')
@@ -226,4 +237,4 @@ sitemap_content += "</urlset>"
 with open("sitemap.xml", "w", encoding="utf-8") as f:
     f.write(sitemap_content)
 
-print(f"Successfully published post with images: {topic_to_write}")
+print(f"Successfully generated article with guaranteed in-content images: {topic_to_write}")
