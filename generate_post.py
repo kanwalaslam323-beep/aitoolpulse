@@ -65,9 +65,10 @@ Formatting:
 """
 
 completion = client.chat.completions.create(
-    model="llama-3.3-70b-versatile",
+    model="llama-3.1-8b-instant",
     messages=[{"role": "user", "content": prompt}],
     temperature=0.7
+
 )
 
 html_body = completion.choices[0].message.content.strip()
