@@ -1,7 +1,6 @@
 import os
 import json
 import re
-import urllib.parse
 from datetime import datetime
 from groq import Groq
 
@@ -72,22 +71,24 @@ img_idx = len(posts) % len(IMAGE_POOL)
 post_image = IMAGE_POOL[img_idx]
 
 prompt = f"""
-You are an expert tech reviewer and SEO writer.
+You are an expert tech reviewer and SEO writer for AIToolPulse.
 Write an in-depth, human-style blog post about: "{topic_to_write}".
 
 Structure requirements:
 1. No fluff or generic intro - jump straight into practical value.
-2. Review 3 to 5 real tools with:
-   - Overview
+2. Review 3 to 4 real tools with:
+   - Tool Name (<h3>)
+   - Visual banner: Include an image tag right under the tool heading using Unsplash tech photos with descriptive alt text:
+     `<img src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80" alt="Tool interface preview" style="width:100%; border-radius:8px; margin:1rem 0;" loading="lazy">` (vary the photo IDs slightly or use standard tech/software query tags).
    - Core Features (bullet points)
    - Pricing / Free details
    - Pros & Cons
-3. Practical comparison table.
+3. Practical comparison table comparing all tools.
 4. Quick verdict and 2 practical FAQs.
 
 Formatting:
 - Return ONLY clean HTML content that goes inside an article container.
-- Use <h2>, <h3>, <p>, <ul>, <li>, and <table> tags.
+- Use <h2>, <h3>, <p>, <ul>, <li>, <img>, and <table> tags.
 - Do NOT include ```html markdown code blocks. Start directly with HTML elements.
 """
 
@@ -208,4 +209,4 @@ sitemap_content += "</urlset>"
 with open("sitemap.xml", "w", encoding="utf-8") as f:
     f.write(sitemap_content)
 
-print(f"Successfully generated article with featured image: {topic_to_write}")
+print(f"Successfully generated article with internal images: {topic_to_write}")
