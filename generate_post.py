@@ -2,19 +2,18 @@ import os
 import json
 import re
 from datetime import datetime
-from google import genai
+from groq import Groq
 
-API_KEY = os.environ.get("GEMINI_API_KEY")
+API_KEY = os.environ.get("GROQ_API_KEY") or os.environ.get("GEMINI_API_KEY")
 if not API_KEY:
-    raise ValueError("GEMINI_API_KEY not found in environment secrets!")
+    raise ValueError("API Key not found in secrets!")
 
-# Initialize the new Google GenAI client
-client = genai.Client(api_key=API_KEY)
+client = Groq(api_key=API_KEY)
 
 TOPICS = [
     "Top 5 Free AI Tools for Video Editing Without Watermark",
     "Best AI Presentation Makers to Create Slides in Minutes",
-    "How to Use Gemini AI to Automate Daily Workflows",
+    "How to Use AI to Automate Daily Workflows",
     "Top AI Tools for Content Writers and Bloggers in 2026",
     "Best Free AI Voice Generators for Realistic Speech",
     "Top AI Image Generators That Are Actually Free",
@@ -46,34 +45,36 @@ if not topic_to_write:
     topic_to_write = f"Must-Have AI Productivity Tools: Edition {len(posts) + 1}"
 
 prompt = f"""
-You are an expert tech journalist and software reviewer.
-Write an in-depth, human-written, highly engaging blog post about: "{topic_to_write}".
+You are an expert tech reviewer and SEO writer.
+Write an in-depth, human-style blog post about: "{topic_to_write}".
 
 Structure requirements:
-1. Do not use generic fluffy intros. Jump straight into practical value.
-2. Provide a clear introduction explaining why this matters.
-3. Review 3-5 specific tools or actionable steps with:
-   - Tool Overview
-   - Key Features (bullet points)
-   - Pricing / Free Tier details
+1. No fluff or generic intro - jump straight into practical value.
+2. Review 3 to 5 real tools with:
+   - Overview
+   - Core Features (bullet points)
+   - Pricing / Free details
    - Pros & Cons
-4. Add a comparison section or practical step-by-step tutorial.
-5. Provide a realistic verdict and FAQ section (at least 2 questions).
+3. Practical advice or comparison section.
+4. Quick verdict and 2 practical FAQs.
 
 Formatting:
-- Return ONLY valid clean HTML content that goes inside a <div class="post-content"> container.
+- Return ONLY clean HTML content that goes inside an article container.
 - Use <h2>, <h3>, <p>, <ul>, <li>, and <table> tags.
-- Do NOT wrap the output in ```html code fences. Start directly with HTML tags.
+- Do NOT include ```html markdown code blocks. Start directly with HTML elements.
 """
 
-response = client.models.generate_content(
-    model="gemini-3.8-flash",
-    contents=prompt
+completion = client.chat.completions.create(
+    model="llama-3.3-70b-versatile",
+    messages=[{"role": "user", "content": prompt}],
+    temperature=0.7
 )
 
-html_body = response.text.strip()
+html_body = completion.choices[0].message.content.strip()
 if html_body.startswith("```html"):
     html_body = html_body[7:]
+if html_body.startswith("```"):
+    html_body = html_body[3:]
 if html_body.endswith("```"):
     html_body = html_body[:-3]
 html_body = html_body.strip()
@@ -87,7 +88,7 @@ full_page_html = f"""<!DOCTYPE html>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{topic_to_write} - AIToolPulse</title>
-  <meta name="description" content="Detailed guide and review: {topic_to_write}">
+  <meta name="description" content="In-depth guide and review: {topic_to_write}">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -132,7 +133,7 @@ new_entry = {
     "slug": slug,
     "date": date_str,
     "readTime": 6,
-    "summary": f"Comprehensive guide and breakdown of {topic_to_write} with features, pros, cons, and practical tips."
+    "summary": f"Hands-on guide and detailed breakdown of {topic_to_write} with pricing, pros, and cons."
 }
 
 posts.insert(0, new_entry)
