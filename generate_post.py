@@ -154,5 +154,37 @@ posts.insert(0, new_entry)
 
 with open("posts.json", "w", encoding="utf-8") as f:
     json.dump(posts, f, indent=2)
+# Generate/Update sitemap.xml automatically
+base_url = "https://aitoolpulse.github.io/aitoolpulse"  # Aapka GitHub Pages URL
+sitemap_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>{base_url}/</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>{base_url}/about.html</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>{base_url}/contact.html</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>{base_url}/privacy.html</loc>
+    <priority>0.8</priority>
+  </url>
+"""
 
+for p in posts:
+    sitemap_content += f"""  <url>
+    <loc>{base_url}/{p['slug']}.html</loc>
+    <priority>0.9</priority>
+  </url>
+"""
+
+sitemap_content += "</urlset>"
+
+with open("sitemap.xml", "w", encoding="utf-8") as f:
+    f.write(sitemap_content)
 print(f"Successfully generated article: {topic_to_write}")
